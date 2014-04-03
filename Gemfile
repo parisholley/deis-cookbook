@@ -16,6 +16,10 @@ end
 
 group :integration do
   gem 'busser-serverspec', '~> 0.2.6'
-  gem 'kitchen-vagrant', '~> 0.13'
-  gem 'test-kitchen', '~> 1.1'
+  gem 'kitchen-vagrant', '~> 0.14.0'
+  gem 'test-kitchen', '~> 1.2.1'
+end
+
+group :kitchen_cloud do
+  gem 'kitchen-digitalocean', '~> 0.6.0'
 end
