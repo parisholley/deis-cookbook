@@ -1,6 +1,14 @@
+#
+# Cookbook Name:: deis
+# Recipe:: registry
+#
+# Copyright 2013, OpDemand LLC
+#
+
+include_recipe 'deis::default'
 
 require 'etcd'
-ruby_block 'publish-registry-config' do
+ruby_block 'publish-registry-config' do # ~FC014
   block do
     client = Etcd.client(host: node.deis.public_ip, port: node.deis.etcd.port)
     client.set('/deis/registry/s3accessKey', node.deis.registry.s3.access_key)
@@ -22,7 +30,7 @@ ruby_block 'publish-registry-config' do
     client.set('/deis/registry/swiftTenantName', node.deis.registry.swift.tenant_name)
     client.set('/deis/registry/swiftRegionName', node.deis.registry.swift.region_name)
   end
-  not_if {
+  not_if do
     begin
       client = Etcd.client(host: node.deis.public_ip, port: node.deis.etcd.port)
       client.get('/deis/registry')
@@ -30,14 +38,13 @@ ruby_block 'publish-registry-config' do
     rescue Net::HTTPServerException, Net::HTTPFatalError
       false
     end
-  }
+  end
 end
 
 docker_image node.deis.registry_data.repository do
   repository node.deis.registry_data.repository
   tag node.deis.registry_data.tag
   action :pull_if_missing
-  cmd_timeout node.deis.registry_data.image_timeout
 end
 
 docker_container node.deis.registry_data.container do
@@ -52,7 +59,6 @@ docker_image node.deis.registry.repository do
   repository node.deis.registry.repository
   tag node.deis.registry.tag
   action node.deis.autoupgrade ? :pull : :pull_if_missing
-  cmd_timeout node.deis.registry.image_timeout
   notifies :redeploy, "docker_container[#{node.deis.registry.container}]", :immediately
 end
 
@@ -66,12 +72,4 @@ docker_container node.deis.registry.container do
   image "#{node.deis.registry.repository}:#{node.deis.registry.tag}"
   port "#{node.deis.registry.port}:#{node.deis.registry.port}"
   volume VolumeHelper.registry(node)
-  cmd_timeout 600
-end
-
-ruby_block 'wait-for-registry' do
-  block do
-    EtcdHelper.wait_for_key(node.deis.public_ip, node.deis.etcd.port,
-                            '/deis/registry/host', seconds=60)
-  end
 end
